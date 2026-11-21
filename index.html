@@ -80,6 +80,10 @@ footer .so{width:44px;height:44px;background:transparent;color:var(--iv)}footer 
 .ib h3{margin:.1rem 0;font:700 1.05rem Cairo,sans-serif;color:var(--g)}
 .ib p{margin:0;font-size:.9rem;opacity:.85;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .go{margin-top:auto;align-self:flex-start;background:var(--g);color:var(--iv);border-radius:20px;padding:.1rem 1rem;font-size:.85rem;font-weight:700}
+.offp{position:fixed;inset:0;z-index:100;background:var(--iv);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:1.5rem}
+.offp img{width:min(50vw,220px);height:auto}
+.offp h1{font:700 2rem "El Messiri",sans-serif;color:var(--g);margin:1rem 0 .3rem}
+.offp p{font-size:1.15rem;max-width:26rem;margin:0}
 dialog{border:0;border-radius:18px;padding:0;width:min(560px,94vw);max-height:90vh;background:var(--card);color:var(--ink);overflow:hidden}
 dialog[open]{animation:pop .35s cubic-bezier(.2,.8,.2,1)}
 @keyframes pop{from{opacity:0;transform:scale(.92)}}
@@ -145,7 +149,7 @@ function openMember(m){const dl=$('#dlg');dl.textContent='';
  dl.append(h,b);dl.showModal()}
 $('#dlg').addEventListener('click',e=>{if(e.target===e.currentTarget)e.currentTarget.close()});
 function renderContacts(a){const g=$('#cG');g.textContent='';
- const it=arr(a).map(x=>String(x).split('|').map(t=>t.trim())).filter(p=>p.length>1&&p[1]);
+ const it=liveContacts(a).map(x=>String(x).split('|').map(t=>t.trim())).filter(p=>p.length>1&&p[1]);
  it.forEach(([l,v],i)=>{const dg=v.replace(/[^\d+]/g,'');let h='';
   if(/^https?:\/\//i.test(v))h=v;else if(/^[^\s@]+@[^\s@]+$/.test(v))h='mailto:'+v;
   else if(/واتس|whats/i.test(l)&&dg)h='https://wa.me/'+dg.replace(/\D/g,'');else if(dg.length>=5)h='tel:'+dg;
@@ -178,19 +182,25 @@ function socialHref(k,v){v=String(v||'').trim();if(!v)return '';
 function icons(box,soc){box.textContent='';Object.keys(ICONS).forEach(k=>{const h=socialHref(k,soc[k]);if(!h)return;
  const a=el('a','so');a.href=h;a.target='_blank';a.rel='noopener';a.title=ICONS[k][0];a.setAttribute('aria-label',ICONS[k][0]);
  a.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true">'+ICONS[k][1]+'</svg>';box.append(a)})}
-function renderSocials(a){const soc=a&&typeof a==='object'&&!Array.isArray(a)?a:{};icons($('#sG'),soc);icons($('#fS'),soc)}
+function renderSocials(a){const soc=a&&typeof a==='object'&&!Array.isArray(a)?a:{},hs=D.settings.hide_social||{},all=(D.settings.sections||{}).socials===false,use={};
+ Object.keys(soc).forEach(k=>{if(!all&&!hs[k])use[k]=soc[k]});icons($('#sG'),use);icons($('#fS'),use)}
+function showOff(s,nm){document.body.style.overflow='hidden';const d=el('div','offp');const i=el('img');i.src=safeImg(s.logo_custom)||FALLBACK_LOGO;i.alt=nm;
+ d.append(i,el('h1',0,nm),el('p',0,s.off_message||'الموقع متوقف مؤقتًا، نعود إليكم قريبًا بإذن الله.'));document.body.append(d)}
+const liveContacts=a=>arr(a).filter(x=>!String(x).trim().startsWith('//'));
 function init(data){D=data;D.settings=D.settings||{};members=arr(D.members).filter(m=>m&&m.hidden!==true);
  const s=D.settings,c=s.colors||{},r=document.documentElement.style;
  if(c.primary)r.setProperty('--g',c.primary);if(c.gold)r.setProperty('--au',c.gold);if(c.ivory)r.setProperty('--iv',c.ivory);
  const nm=s.name||'فريق النبأ العظيم الدعوي';document.title=nm;
+ if(s.site_enabled===false){showOff(s,nm);return}
  ['#hName','#name','#fName'].forEach(i=>$(i).textContent=nm);
- const u=safeImg(s.logo_custom)||FALLBACK_LOGO;if(u){const i=el('img','logo');i.src=u;i.alt=nm;$('#lg').replaceWith(i)}
+ const u=safeImg(s.logo_custom)||FALLBACK_LOGO;if(u&&(s.sections||{}).logo!==false){const i=el('img','logo');i.src=u;i.alt=nm;$('#lg').replaceWith(i)}
+ if((s.sections||{}).herobtns===false)$('.cta').style.display='none';
  $('#yr').textContent=new Date().getFullYear();
  document.querySelectorAll('h2').forEach(h=>rv(h));
  const l=$('#lead');arr(s.about).forEach((t,i)=>l.append(rv(el('p','lead',t),i)));
  renderMembers();const off=k=>(s.sections||{})[k]===false;renderContacts(s.contacts);renderSocials(s.socials);renderLibs();
  $('#contact').hidden=!($('#cG').children.length||$('#sG').children.length);
- const wa=arr(s.contacts).map(x=>String(x).split('|').map(t=>t.trim())).find(p=>{const d=(p[1]||'').replace(/\D/g,'');return /واتس|whats/i.test(p[0])&&d.length>=7&&!/^0+$/.test(d)});
+ const wa=liveContacts(s.contacts).map(x=>String(x).split('|').map(t=>t.trim())).find(p=>{const d=(p[1]||'').replace(/\D/g,'');return /واتس|whats/i.test(p[0])&&d.length>=7&&!/^0+$/.test(d)});
  const wl=socialHref('whatsapp',(s.socials||{}).whatsapp)||(wa?'https://wa.me/'+wa[1].replace(/\D/g,''):'');if(wl&&!off('chat')){const a=el('a','wa','تحدّث معنا الآن');a.href=wl;a.target='_blank';a.rel='noopener';document.body.append(a)}
  [['about','about'],['members','members'],['contact','contact']].forEach(([id,k])=>{if(off(k))$('#'+id).hidden=true});
  document.querySelectorAll('a[href^="#"]').forEach(a=>{const t=document.getElementById(a.getAttribute('href').slice(1));if(t&&t.hidden)a.style.display='none'});buildNav()}
